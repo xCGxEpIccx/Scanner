@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner Pro - Android Edition</title>
+    
+    <!-- Modulares Frontend: Zuerst CSS laden -->
+    <link rel="stylesheet" href="scanner-css.css">
+    
+    <style>
+        /* Notfall-CSS falls CSS-File nicht lädt */
+        body { font-family: 'Segoe UI', Arial, sans-serif; }
+        
+        .container { 
+            max-width: 500px; margin: 0 auto; padding: 8px; 
+            background: #1a1a1a; min-height: 100vh; border-radius: 24px;
+        }
+
+        /* Status-Indikator oben links - kompakt und informativ */
+        .status-pill { 
+            display: inline-block; padding: 6px 14px; border-radius: 20px; 
+            background: #00b300; color: white; font-size: 13px; margin-bottom: 10px; 
+            text-transform: none; font-weight: bold; letter-spacing: normal;
+        }
+
+        /* Kamera-Video - passt sich dynamisch an */
+        #webcam { 
+            width: 100%; border-radius: 12px; background: #000; object-fit: cover; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); min-height: 250px;
+        }
+
+        /* Overlay für den gescannten Code - zentriert über der Kamera */
+        #scan-overlay {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            pointer-events: none; opacity: 0.9; padding-left: 8px;
+            background: rgba(255,255,255,0.9); border-radius: 24px; color: black;
+        }
+
+        /* Der neue Rettungs-Knopf, falls die Kamera blockiert */
+        #btn-cam-restart {
+            position: absolute; top: -36px; left: 12px; width: 40px; height: 40px;
+            border-radius: 50%; background: #ff9800; color: white; font-size: 24px;
+            display: none; align-items: center; justify-content: center; cursor: pointer;
+        }
+
+        /* Die zwei Haupt-Buttons mit Icon */
+        .action-btn { 
+            width: calc(50% - 8px); padding: 16px 8px; font-size: 16px; 
+            border-radius: 32px; border: none; font-weight: bold; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: transform 0.1s;
+        }
+
+        .action-btn:active { transform: scale(0.95); }
+
+        .btn-add { 
+            background: linear-gradient(135deg, #00b300, #00d400); color: white;
+        }
+
+        .btn-remove { 
+            background: linear-gradient(135deg, #d90000, #ff4d4d); color: white;
+        }
+
+        /* Die Card-artige Liste */
+        .list-box.card-list { 
+            background: rgba(30, 30, 30, 0.8); border-radius: 12px; 
+            padding: 12px; margin-top: 15px; max-height: 40vh; overflow-y: auto;
+        }
+
+        .product-item { 
+            background: #1e1e1e; border-left: 4px solid #00b300; 
+            margin-bottom: 8px; padding: 10px; border-radius: 6px; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .product-content { font-size: 14px; color: #fff; }
+
+        /* Animierter Counter */
+        #total-count { font-size: 20px; color: #ff9800; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+
+        /* Loading-Animation für die Kamera-Übergänge */
+        .video-loading { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Pulsierender Button beim Scannen */
+        .pulsing { animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+
+        /* Responsive Footer */
+        .footer { margin-top: auto; padding-top: 15px; text-align: center; }
+        
+        /* Touch-Friendly für Android */
+        .touch-friendly { -webkit-tap-highlight-color: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    
+    <!-- Der App-Behälter -->
+    <div class="container touch-friendly">
+        
+        <!-- Status-Indikator oben links -->
+        <div id="status-pill" class="status-pill">📷 Kamera aktiv</div>
+        
+        <!-- Die Kamera (Video) -->
+        <video id="webcam" autoplay playsinline muted></video>
+        
+        <!-- Overlay-Felder für bessere Lesbarkeit -->
+        <div id="scan-overlay">
+            <span>--</span>
+        </div>
+
+        <!-- Der neue Rettungs-Knopf, falls die Kamera blockiert (verborgen) -->
+        <button id="btn-cam-restart" onclick="initCamera()">📷</button>
+        
+        <!-- Die zwei Haupt-Buttons mit Icon -->
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button id="btn-add" class="action-btn btn-add touch-friendly">+<br>Hinzufügen</button>
+            <button id="btn-remove" class="action-btn btn-remove touch-friendly">−<br>Entfernen</button>
+        </div>
+
+        <!-- Die Card-artige Liste -->
+        <h3 style="color: #00b300; margin-top: 20px; font-size: 18px;">Dein Bestand:</h3>
+        
+        <div id="bestand-liste" class="list-box card-list">
+            <!-- Wird per JS gefüllt -->
+            <div style='text-align:center; color:#666;'>📦 Dein Bestand ist leer.</div>
+        </div>
+
+        <!-- Footer mit Gesamtanzahl -->
+        <p style="color: #999; margin-top: 15px;">📊 Insgesamt: <span id="total-count">0</span> Produkte</p>
+    </div>
+
+    <!-- Modulare JS-Logik (wird zuerst geladen) -->
+    <script src="scanner-js.js"></script>
+    
+    <!-- Fallback: Sollte scanner-js.js fehlen, lädt dieses Inline-Skript -->
+    <script id="scanner-fallback" type="text/template">
+        // Dieser Block wird nur geladen, wenn der modulare JS fehlgeschlagen ist
+        if (typeof initScanner !== 'function') {
+            console.log("Modularer Scanner nicht gefunden - lade Inline-Fallback...");
+            
+            let mode = "add";
+            let lastScannedCode = "";
+            let barcodeDetector;
+
+            window.initCamera = function() {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: 1280, height: 720 } 
+                })
+                .then(stream => {
+                    const video = document.getElementById("webcam");
+                    video.srcObject = stream;
+                    video.addEventListener('play', () => scanSchleife(video));
+                    
+                    setTimeout(() => {
+                        if (video.srcObject && !video.paused) scanSchleife(video);
+                    }, 300);
+                });
+            };
+
+            window.scanSchleife = function(video) {
+                setInterval(async () => {
+                    if (!barcodeDetector || video.paused) return;
+                    
+                    const barcodes = await barcodeDetector.detect(video);
+                    if (barcodes.length > 0) {
+                        let code = barcodes[0].rawValue;
+                        let now = Date.now();
+                        
+                        // Duplikat-Filter: Nur wenn >3 Sekunden seit letztem Scan vergangen
+                        if (code === lastScannedCode && (now - lastScanTime) < 3000) return;
+                        
+                        lastScannedCode = code;
+                        lastScanTime = now;
+
+                        // Einfache Add/Remove Logik
+                        const listDiv = document.getElementById("bestand-liste");
+                        
+                        if (!listDiv.innerHTML.includes('Dein Bestand ist leer')) {
+                            let item = {};
+                            
+                            if (mode === "add") {
+                                if (!item) { item.anzahl = 1; }
+                                else item.anzahl += 1;
+                            } else if (mode === "remove") {
+                                if (item) {
+                                    item.anzahl -= 1;
+                                    if (item.anzahl <= 0) delete products[code];
+                                }
+                            }
+
+                            listDiv.innerHTML = `<div class="product-item"><b>${code}</b> (${item.anzahl}x)</div>`;
+                        }
+                    }
+                }, 200);
+            };
+
+            window.setMode = function(newMode) { mode = newMode; updateListDisplay(); };
+            
+            // Initialisierung nach kurzer Verzögerung
+            setTimeout(() => initCamera(), 500);
+        }
+    </script>
+</body>
+</html>

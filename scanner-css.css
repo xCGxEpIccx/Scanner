@@ -1,0 +1,53 @@
+/* Modulares Frontend: Zuerst CSS laden */
+.container { max-width: 500px; margin: 0 auto; padding: 8px; }
+
+/* Status-Pill oben links - kompakt und informativ */
+.status-pill { 
+    display: inline-block; padding: 6px 14px; border-radius: 20px; 
+    background: #00b300; color: white; font-size: 13px; margin-bottom: 10px; 
+    text-transform: none; font-weight: bold; letter-spacing: normal;
+}
+
+/* Kamera-Video - passt sich dynamisch an */
+#webcam { 
+    width: 100%; border-radius: 12px; background: #000; object-fit: cover; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Overlay für den gescannten Code - zentriert über der Kamera */
+#scan-overlay {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    pointer-events: none; opacity: 0.9;
+}
+
+/* Action-Buttons - modern und touch-freundlich */
+.action-btn { 
+    width: calc(50% - 8px); padding: 16px 8px; font-size: 16px; 
+    border-radius: 32px; border: none; font-weight: bold; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: transform 0.1s;
+}
+
+.action-btn:active { transform: scale(0.95); }
+
+.btn-add { background: linear-gradient(135deg, #00b300, #00d400); color: white; }
+.btn-remove { background: linear-gradient(135deg, #d90000, #ff4d4d); color: white; }
+
+/* Die Card-artige Liste */
+.list-box.card-list { 
+    background: rgba(30, 30, 30, 0.8); border-radius: 12px; 
+    padding: 12px; margin-top: 15px; max-height: 40vh; overflow-y: auto;
+}
+
+.product-item { 
+    background: #1e1e1e; border-left: 4px solid #00b300; 
+    margin-bottom: 8px; padding: 10px; border-radius: 6px; 
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+/* Animierter Counter */
+#total-count { font-size: 20px; color: #ff9800; }
+
+/* Loading-Animation für die Kamera-Übergänge */
+.video-loading { animation: spin 2s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
